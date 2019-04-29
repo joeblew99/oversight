@@ -2,7 +2,7 @@ language: go
 sudo: false
 go_import_path: github.com/joeblew99/oversight
 go:
-  - "1.12"
+  - "1.12.4"
 env:
   global:
     - GO111MODULE=off
