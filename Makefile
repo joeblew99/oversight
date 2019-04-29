@@ -1,22 +1,57 @@
-.DEFAULT_GOAL:=help
-SHELL:=/bin/bash
-GO111MODULE=on
+TAGS ?= "sqlite"
+GO_BIN ?= go
 
+install:
+	packr2
+	$(GO_BIN) install -tags ${TAGS} -v .
+	make tidy
 
-LIB_NAME=oversight
-LIB=github.com/joeblew99/oversight
+tidy:
+ifeq ($(GO111MODULE),on)
+	$(GO_BIN) mod tidy
+else
+	echo skipping go mod tidy
+endif
 
+deps:
+	$(GO_BIN) get github.com/gobuffalo/release
+	$(GO_BIN) get github.com/gobuffalo/packr/v2/packr2
+	$(GO_BIN) get -tags ${TAGS} -t ./...
+	make tidy
 
-help:  ## Display this help
-	# from: https://suva.sh/posts/well-documented-makefiles/
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+build:
+	packr2
+	$(GO_BIN) build -v .
+	make tidy
 
+test:
+	packr2
+	$(GO_BIN) test -cover -tags ${TAGS} ./...
+	make tidy
 
-test: ### test
-	go test ./...
+ci-deps:
+	$(GO_BIN) get -tags ${TAGS} -t ./...
 
-github-open: ### github-open
-	open https://$(LIB)
+ci-test:
+	$(GO_BIN) test -tags ${TAGS} -race ./...
 
-travis-open: ### travis-open
-	open https://travis-ci.org/joeblew99/$(LIB_NAME)/
+lint:
+	gometalinter --vendor ./... --deadline=1m --skip=internal
+	make tidy
+
+update:
+	$(GO_BIN) get -u -tags ${TAGS}
+	make tidy
+	packr2
+	make test
+	make install
+	make tidy
+
+release-test:
+	$(GO_BIN) test -tags ${TAGS} -race ./...
+	make tidy
+
+release:
+	make tidy
+	release -y -f version.go
+	make tidy
